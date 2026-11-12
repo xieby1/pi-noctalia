@@ -35,7 +35,6 @@ local function publish()
   local sessions = {}
   for id, record in pairs(records) do
     local item = table.clone(record.value)
-    item.instanceId = id
     if record.stale then item.state = "disconnected" end
     table.insert(sessions, item)
   end
