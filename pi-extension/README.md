@@ -26,4 +26,10 @@ The receiver validates these fields and uses full snapshots so retries are idemp
 node --test index.test.mjs
 ```
 
-The parent nixpkgs configuration supplies the Nix module and runs the installed-extension and real Pi TUI smoke checks.
+For a real Pi TUI smoke check (with `pi` on `PATH`), run from the repository root:
+
+```sh
+python3 pi-extension/smoke.py pi-extension/index.ts
+```
+
+Install `index.ts` and `transport.ts` together in an auto-discovered Pi extension directory (or link this directory as described in the root README).

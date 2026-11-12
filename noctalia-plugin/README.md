@@ -24,8 +24,8 @@ The service has no file polling, daemon, database, network listener or custom IP
 
 ## Integration
 
-The parent configuration repository installs the filtered plugin files and owns the saved-widget migration from `local/pi-sessions:widget` to `local/pi-noctalia:widget`.
-The user-facing label is **Pi Sessions**.
+Install this directory under `$XDG_DATA_HOME/noctalia/plugins/pi-noctalia` (default `~/.local/share/noctalia/plugins/pi-noctalia`) and configure a bar widget of type `local/pi-noctalia:widget`. If upgrading from `local/pi-sessions:widget`, migrate saved widget types in your deployment configuration.
+The user-facing label remains **Pi Sessions**.
 
 ## Checks
 
