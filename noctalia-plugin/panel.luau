@@ -1,6 +1,8 @@
 --!nonstrict
 local presentation = require("./presentation.luau")
+local focusSession = require("./focus.luau")
 local sessions = noctalia.state.get("sessions") or {}
+local hovered
 
 function onCloseClicked()
   panel.close()
@@ -10,11 +12,18 @@ local function render()
   local rows = {}
   for _, session in ipairs(sessions) do
     local status, glyph, color = presentation.status(session)
-    table.insert(rows, ui.column({ key = session.instanceId, gap = 5, paddingV = 8 }, {
+    local id = session.instanceId
+    local focusable = session.ghostty ~= nil and session.state ~= "disconnected"
+    table.insert(rows, ui.column({
+      key = id, gap = 5, padding = 8, radius = 6,
+      fill = focusable and hovered == id and "surface_container" or nil,
+      onClick = focusable and function() focusSession(id) end or nil,
+      onHover = focusable and "onRowHover" or nil,
+    }, {
       ui.row({ gap = 8, align = "center" }, {
         ui.glyph({ name = glyph, color = color }),
         ui.label({ text = session.name, fontWeight = "bold", flexGrow = 1, maxLines = 2 }),
-        ui.label({ text = status, color = color }),
+        ui.label({ text = focusable and status or status .. " · Focus unavailable", color = color }),
       }),
       ui.label({ text = session.cwd, maxLines = 2 }),
       ui.label({ text = session.model ~= "" and session.model or "No model selected", fontSize = 12 }),
@@ -33,6 +42,12 @@ local function render()
     }),
     ui.scroll({ flexGrow = 1 }, rows),
   }))
+end
+
+function onRowHover(state, id)
+  if state == "true" then hovered = id
+  elseif hovered == id then hovered = nil end
+  render()
 end
 
 function onOpen()

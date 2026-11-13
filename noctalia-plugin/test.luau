@@ -174,9 +174,24 @@ send("upsert", second)
 panelId = nil
 renders.widget.children[4].props.onClick()
 check(commands[#commands].argv[12] == second.ghostty.surfaceId and panelId == nil, "each chip selects its own exact surface")
+local panelRows = renders.panel.children[2].children
+check(panelRows[1].props.onClick and panelRows[3].props.onClick, "focusable panel rows are clickable")
+check(panelRows[2].props.onClick == nil and panelRows[2].children[1].children[3].props.text:find("Focus unavailable", 1, true),
+  "sessions without a Ghostty target explain why they cannot be focused")
+panel[panelRows[3].props.onHover]("true", panelRows[3].props.key)
+check(renders.panel.children[2].children[3].props.fill ~= nil, "focusable row highlights on hover")
+panel[panelRows[3].props.onHover]("false", panelRows[3].props.key)
+check(renders.panel.children[2].children[3].props.fill == nil, "row highlight clears on leave")
+panelId = nil
+renders.panel.children[2].children[3].props.onClick()
+check(commands[#commands].argv[12] == second.ghostty.surfaceId and panelId == nil, "panel focuses its own exact Ghostty tab")
+renders.panel.children[2].children[1].props.onClick()
+check(commands[#commands].argv[12] == focusable.ghostty.surfaceId and panelId == nil, "each panel row selects its own exact surface")
 local beforeDeadClick = #commands
 procStats[101] = nil
 panelId = nil
+renders.panel.children[2].children[1].props.onClick()
+check(#commands == beforeDeadClick and panelId == nil, "panel never focuses an exited Pi or toggles itself")
 renders.widget.children[2].props.onClick()
 check(#commands == beforeDeadClick and panelId == "local/pi-noctalia:sessions", "exited Pi never focuses its old tab")
 procStats[101] = processStat(101, "98765")
@@ -216,6 +231,9 @@ send("upsert", working) -- duplicate does not refresh liveness
 now += 5000
 service.update()
 check(shared.sessions[2].state == "disconnected", "duplicates cannot keep a dead instance alive")
+check(renders.panel.children[2].children[1].props.onClick == nil and
+  renders.panel.children[2].children[1].children[1].children[3].props.text:find("Focus unavailable", 1, true),
+  "disconnected Ghostty rows are not clickable")
 panelId = nil
 local beforeStaleClick = #commands
 renders.widget.children[2].props.onClick()

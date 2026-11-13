@@ -3,7 +3,7 @@
 local path = "/com/mitchellh/ghostty"
 local iface = "org.gtk.Actions"
 
-return function(origin, stillLive)
+local function focusGhostty(origin, stillLive)
   local function unavailable()
     noctalia.notify("Pi Sessions", "Unable to focus this terminal")
   end
@@ -41,4 +41,38 @@ return function(origin, stillLive)
     tryName(1)
   end, 1500)
   if not started then unavailable() end
+end
+
+local function live(id, target, piPid)
+  for _, session in ipairs(noctalia.state.get("sessions") or {}) do
+    if session.instanceId == id and session.state ~= "disconnected" and session.pid == piPid
+        and session.ghostty and session.ghostty.pid == target.pid
+        and session.ghostty.surfaceId == target.surfaceId
+        and session.ghostty.piStartTicks == target.piStartTicks then
+      local stat = noctalia.readFile("/proc/" .. piPid .. "/stat")
+      local fields = type(stat) == "string" and stat:match("^.*%) (.*)")
+      if not fields then return false end
+      local index = 0
+      for field in fields:gmatch("%S+") do
+        index += 1
+        if index == 1 and (field == "Z" or field == "X" or field == "x") then return false end
+        if index == 20 then return field == target.piStartTicks end
+      end
+    end
+  end
+  return false
+end
+
+return function(id)
+  for _, session in ipairs(noctalia.state.get("sessions") or {}) do
+    if session.instanceId == id then
+      if not session.ghostty then return false end
+      local target, piPid = session.ghostty, session.pid
+      local stillLive = function() return live(id, target, piPid) end
+      if not stillLive() then return false end
+      focusGhostty(target, stillLive)
+      return true
+    end
+  end
+  return false
 end
