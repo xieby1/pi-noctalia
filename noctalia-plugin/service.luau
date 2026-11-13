@@ -23,10 +23,21 @@ local function identity(value)
     and integer(value.sequence, 1)
 end
 
+local function ghostty(value)
+  if value == nil then return true end
+  if type(value) ~= "table" or not integer(value.pid, 1) or
+      type(value.surfaceId) ~= "string" or #value.surfaceId > 20 or
+      type(value.piStartTicks) ~= "string" or #value.piStartTicks > 20 then return false end
+  return string.match(value.surfaceId, "^[1-9]%d*$") ~= nil
+    and (#value.surfaceId < 20 or value.surfaceId <= "18446744073709551615")
+    and string.match(value.piStartTicks, "^[1-9]%d*$") ~= nil
+end
+
 local function snapshot(value)
   return identity(value) and integer(value.pid, 1) and integer(value.startedAt, 0)
     and text(value.sessionId, 512, false) and text(value.name, 512, false)
     and text(value.cwd, 4096, false) and text(value.model, 1024, true)
+    and ghostty(value.ghostty)
     and (value.state == "working" or value.state == "idle" or value.state == "waiting")
     and type(value.aborted) == "boolean"
 end
@@ -64,6 +75,8 @@ function onIpc(event, payload)
       pid = value.pid, startedAt = previous and previous.value.startedAt or value.startedAt,
       sessionId = value.sessionId, name = value.name, cwd = value.cwd,
       model = value.model, state = value.state, aborted = value.aborted,
+      ghostty = value.ghostty and { pid = value.ghostty.pid, surfaceId = value.ghostty.surfaceId,
+        piStartTicks = value.ghostty.piStartTicks },
     } }
     publish()
   end

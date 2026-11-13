@@ -170,6 +170,22 @@ test("status metadata is bounded and passed as data, never evaluated by a shell"
   await h.emit("session_shutdown");
 });
 
+test("invalid Ghostty IDs never enter snapshots", async t => {
+  const f = await fixture(t);
+  const previous = { TERM_PROGRAM: process.env.TERM_PROGRAM, GHOSTTY_SURFACE_ID: process.env.GHOSTTY_SURFACE_ID };
+  t.after(() => {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  });
+  process.env.TERM_PROGRAM = "ghostty";
+  process.env.GHOSTTY_SURFACE_ID = "0x0000000000000000";
+  const h = host(t);
+  h.emit("session_start");
+  assert.equal((await f.waitFor(1))[0].payload.ghostty, undefined);
+  await h.emit("session_shutdown");
+});
+
 test("slow delivery coalesces updates and shutdown supersedes unsent snapshots", async t => {
   const f = await fixture(t);
   process.env.PI_NOCTALIA_TEST_MODE = "slow";

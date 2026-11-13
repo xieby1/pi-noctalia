@@ -69,6 +69,9 @@ with tempfile.TemporaryDirectory(prefix="pi-noctalia-smoke-") as directory:
         until(lambda: len(messages()) >= 1)
         first = json.loads(messages()[0][-1])
         assert first["state"] == "idle" and first["pid"] == proc.pid
+        if "ghostty" in first:
+            stat = pathlib.Path(f"/proc/{proc.pid}/stat").read_text()
+            assert first["ghostty"]["piStartTicks"] == stat.rsplit(") ", 1)[1].split()[19]
         # Let the first prompt render before typing a real built-in command.
         for _ in range(15):
             pump()

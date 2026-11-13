@@ -8,6 +8,7 @@ The service receives full snapshots over plugin IPC and keeps the registry in me
 - Horizontal bars show short names and distinct working, waiting, idle, stopped and disconnected states.
 - Vertical bars use glyphs to fit the bar thickness.
 - Three sessions are visible by default; `max_visible` controls the limit and `+N` opens the full list.
+- Clicking π opens the panel; clicking a live Ghostty session focuses its exact tab or split. Sessions without a verified Ghostty target, or sessions whose Pi process has exited, open the panel instead.
 - Tooltips and the popup show the project, model, logical session ID and instance ID.
 - State changes do not reorder sessions, and the bar hides when the registry is empty.
 
@@ -21,6 +22,7 @@ A five-second update interval bounds the transition delay.
 A restarted service starts empty and is repopulated by the publisher's next heartbeat.
 
 The service has no file polling, daemon, database, network listener or custom IPC server.
+For focus, the widget checks the Pi process's start time against `/proc` (including after asynchronous bus lookup), uses `busctl` to find the owning Ghostty process on the user bus, verifies its GTK `present-surface` action, and passes the full uint64 surface ID as text. This is an internal Ghostty action rather than a public CLI; a missing or changed action fails without focusing another session.
 
 ## Integration
 

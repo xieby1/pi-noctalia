@@ -18,6 +18,7 @@ Failures are silent and fail-open so a missing or slow Noctalia cannot block Pi.
 ## Snapshot contract
 
 Snapshots use schema `1` and contain a random `instanceId`, process `pid`, logical `sessionId`, `startedAt`, `sequence`, `name`, `cwd`, `model`, `state` and `aborted`.
+On local Linux Ghostty, they also carry `ghostty.pid`, a decimal-string `ghostty.surfaceId` (uint64), and the Pi process's `ghostty.piStartTicks` from `/proc/self/stat`. The strings preserve exact identities through Luau and D-Bus; the field is omitted when the surface or either process identity cannot be verified.
 The receiver validates these fields and uses full snapshots so retries are idempotent.
 
 ## Checks

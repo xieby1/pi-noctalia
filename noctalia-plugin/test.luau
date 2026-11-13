@@ -13,6 +13,14 @@ local vertical = false
 local visible = false
 local panelId = nil
 local closed = false
+local commands = {}
+local notifications = {}
+local function processStat(pid, ticks, state)
+  return pid .. " (node) " .. (state or "S") .. " " .. string.rep("0 ", 18) .. ticks .. " 0"
+end
+local procStats = { [101] = processStat(101, "12345"), [103] = processStat(103, "23456") }
+local deferDescribe = false
+local pendingDescribe
 local constructors = {}
 for _, kind in ipairs({ "row", "column", "glyph", "label", "button", "scroll", "separator" }) do
   constructors[kind] = function(props, children) return { kind = kind, props = props, children = children or {} } end
@@ -33,6 +41,22 @@ local function loadEntry(name)
     setUpdateInterval = function(value) intervals[name] = value end,
     getConfig = function(key) check(key == "max_visible", "undeclared setting"); return 3 end,
     togglePanel = function(id) panelId = id end,
+    notify = function(title, body) table.insert(notifications, { title, body }) end,
+    readFile = function(path) return procStats[tonumber(path:match("^/proc/(%d+)/stat$"))] end,
+    runAsync = function(argv, callback, timeout)
+      table.insert(commands, { argv = copy(argv), timeout = timeout })
+      if callback then
+        local kind = argv[4] == "list" and "list" or argv[8] == "Describe" and "Describe" or "Activate"
+        local result = { exitCode = 0, stdout = kind == "list" and "bus-list" or kind == "Describe" and "bus-action" or "" }
+        if kind == "Describe" and argv[5] == ":1.11" then result.exitCode = 1 end
+        if kind == "Describe" and deferDescribe and argv[5] == ":1.12" then
+          pendingDescribe = function() callback(result) end
+        else
+          callback(result)
+        end
+      end
+      return true
+    end,
     json = { decode = function(raw) return copy(decoded[raw]) end },
     state = {
       get = function(key) return copy(shared[key]) end,
@@ -98,6 +122,80 @@ check(visible and #renders.widget.children == 5, "three chips plus header and ov
 check(renders.widget.children[5].props.text == "+1", "overflow count")
 check(#renders.panel.children[2].children == 4, "panel lists every session")
 check(renders.widget.children[2].props.tooltip:find("/projects/demo", 1, true) ~= nil, "tooltip contains full project")
+local withGhostty = sample(5)
+withGhostty.ghostty = { pid = 4242, surfaceId = "18446744073709551615", piStartTicks = "12345", extra = "ignored" }
+send("upsert", withGhostty)
+check(#shared.sessions == 5 and shared.sessions[5].ghostty.pid == 4242, "Ghostty origin is retained")
+check(shared.sessions[5].ghostty.surfaceId == "18446744073709551615", "64-bit surface ID stays exact")
+check(shared.sessions[5].ghostty.extra == nil, "unknown terminal data is not exposed")
+send("remove", { schema = 1, instanceId = withGhostty.instanceId, sequence = 2 })
+for _, bad in ipairs({ false, {}, { pid = 0, surfaceId = "1", piStartTicks = "12345" },
+    { pid = 4242, surfaceId = "0", piStartTicks = "12345" },
+    { pid = 4242, surfaceId = "01", piStartTicks = "12345" },
+    { pid = 4242, surfaceId = "18446744073709551616", piStartTicks = "12345" },
+    { pid = 4242, surfaceId = "bogus", piStartTicks = "12345" },
+    { pid = 4242, surfaceId = "1" }, { pid = 4242, surfaceId = "1", piStartTicks = "bogus" } }) do
+  local invalid = sample(7)
+  invalid.ghostty = bad
+  send("upsert", invalid)
+  check(#shared.sessions == 4, "invalid Ghostty origin is rejected")
+end
+check(renders.widget.children[1].kind == "row" and renders.widget.children[1].props.onClick == "onClick", "π opens panel independently")
+local overflow = renders.widget.children[5]
+check(overflow.props.onClick == "onClick", "+N opens panel independently")
+widget[overflow.props.onClick]()
+check(panelId == "local/pi-noctalia:sessions", "+N click opens the panel")
+panelId = nil
+widget[renders.widget.children[1].props.onClick]()
+check(panelId == "local/pi-noctalia:sessions", "π click opens the panel")
+panelId = nil
+renders.widget.children[2].props.onClick()
+check(panelId == "local/pi-noctalia:sessions" and #commands == 0, "unidentified session opens panel without focusing")
+local focusable = sample(1, 2)
+focusable.ghostty = { pid = 4242, surfaceId = "18446744073709551615", piStartTicks = "12345" }
+send("upsert", focusable)
+decoded["bus-list"] = { { name = ":1.10", pid = 999 }, { name = ":1.11", pid = 4242 }, { name = ":1.12", pid = 4242 } }
+decoded["bus-action"] = { type = "(bgav)", data = { { true, "t", {} } } }
+panelId = nil
+renders.widget.children[2].props.onClick()
+check(#commands == 4 and commands[4].argv[4] == ":1.12", "focus probes only matching Ghostty bus owners")
+check(commands[4].argv[12] == focusable.ghostty.surfaceId and commands[4].timeout == 1500, "exact uint64 ID is passed as text")
+check(panelId == nil, "focus chip does not open panel")
+decoded["bus-list"] = { { name = ":1.10", pid = 999 } }
+renders.widget.children[2].props.onClick()
+check(#commands == 5 and #notifications == 1, "missing bus owner never focuses another process")
+decoded["bus-list"] = { { name = ":1.11", pid = 4242 }, { name = ":1.12", pid = 4242 } }
+local second = sample(3, 2)
+second.ghostty = { pid = 4242, surfaceId = "9007199254740993", piStartTicks = "23456" }
+send("upsert", second)
+panelId = nil
+renders.widget.children[4].props.onClick()
+check(commands[#commands].argv[12] == second.ghostty.surfaceId and panelId == nil, "each chip selects its own exact surface")
+local beforeDeadClick = #commands
+procStats[101] = nil
+panelId = nil
+renders.widget.children[2].props.onClick()
+check(#commands == beforeDeadClick and panelId == "local/pi-noctalia:sessions", "exited Pi never focuses its old tab")
+procStats[101] = processStat(101, "98765")
+panelId = nil
+renders.widget.children[2].props.onClick()
+check(#commands == beforeDeadClick and panelId == "local/pi-noctalia:sessions", "reused Pi PID never focuses its old tab")
+procStats[101] = processStat(101, "12345", "Z")
+panelId = nil
+renders.widget.children[2].props.onClick()
+check(#commands == beforeDeadClick and panelId == "local/pi-noctalia:sessions", "zombie Pi never focuses its old tab")
+procStats[101] = processStat(101, "12345")
+decoded["bus-list"] = { { name = ":1.12", pid = 4242 } }
+deferDescribe = true
+panelId = nil
+renders.widget.children[2].props.onClick()
+check(type(pendingDescribe) == "function", "action lookup can finish after Pi exits")
+local beforeLateResult = #commands
+procStats[101] = nil
+pendingDescribe()
+check(#commands == beforeLateResult and panelId == nil, "late action result cannot focus an exited Pi")
+deferDescribe = false
+procStats[101] = processStat(101, "12345")
 widget.onClick()
 check(panelId == "local/pi-noctalia:sessions", "bar opens the session panel")
 panel.onCloseClicked()
@@ -115,6 +213,10 @@ send("upsert", working) -- duplicate does not refresh liveness
 now += 5000
 service.update()
 check(shared.sessions[2].state == "disconnected", "duplicates cannot keep a dead instance alive")
+panelId = nil
+local beforeStaleClick = #commands
+renders.widget.children[2].props.onClick()
+check(panelId == "local/pi-noctalia:sessions" and #commands == beforeStaleClick, "stale session never focuses a terminal")
 local recovered = sample(2, 3)
 recovered.state = "waiting"
 send("upsert", recovered)
