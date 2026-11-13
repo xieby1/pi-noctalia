@@ -1,7 +1,7 @@
 id = "local/pi-noctalia"
 name = "Pi Sessions"
 version = "0.1.0"
-plugin_api = 32
+plugin_api = 34
 author = "local"
 description = "Live Pi session status pushed by pi-noctalia."
 icon = "terminal"
@@ -13,6 +13,7 @@ entry = "service.luau"
 [[widget]]
 id = "widget"
 entry = "widget.luau"
+hover_highlight = false
 
 [[widget.setting]]
 key = "max_visible"

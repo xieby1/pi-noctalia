@@ -19,7 +19,7 @@ ln -s "$PWD/pi-extension" "$HOME/.pi/agent/extensions/pi-noctalia"
 ln -s "$PWD/noctalia-plugin" "${XDG_DATA_HOME:-$HOME/.local/share}/noctalia/plugins/pi-noctalia"
 ```
 
-Enable `local/pi-noctalia` and add its `widget` to your Noctalia bar. Reload Pi and Noctalia after installation. Exact Ghostty tab/split focus requires Linux, Ghostty, and `busctl` on Noctalia's `PATH`; other sessions still appear in the panel.
+Enable `local/pi-noctalia` and add its `widget` to your Noctalia bar (Noctalia v5.3.0 or newer). Reload Pi and Noctalia after installation. Exact Ghostty tab/split focus requires Linux, Ghostty, and `busctl` on Noctalia's `PATH`; other sessions still appear in the panel.
 
 ## Checks
 

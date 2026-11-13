@@ -9,6 +9,7 @@ The service receives full snapshots over plugin IPC and keeps the registry in me
 - Vertical bars use glyphs to fit the bar thickness.
 - Three sessions are visible by default; `max_visible` controls the limit and `+N` opens the full list.
 - Clicking π opens the panel; clicking a live Ghostty session focuses its exact tab or split. Sessions without a verified Ghostty target, or sessions whose Pi process has exited, open the panel instead.
+- π, each session chip, and +N use separate native button hover feedback; gaps between them are not clickable. Bar status glyphs remain distinct but use a neutral foreground; the popup retains status colors.
 - Tooltips and the popup show the project, model, logical session ID and instance ID.
 - State changes do not reorder sessions, and the bar hides when the registry is empty.
 
@@ -26,7 +27,7 @@ For focus, the widget checks the Pi process's start time against `/proc` (includ
 
 ## Integration
 
-Install this directory under `$XDG_DATA_HOME/noctalia/plugins/pi-noctalia` (default `~/.local/share/noctalia/plugins/pi-noctalia`) and configure a bar widget of type `local/pi-noctalia:widget`. If upgrading from `local/pi-sessions:widget`, migrate saved widget types in your deployment configuration.
+Install this directory under `$XDG_DATA_HOME/noctalia/plugins/pi-noctalia` (default `~/.local/share/noctalia/plugins/pi-noctalia`) and configure a bar widget of type `local/pi-noctalia:widget`. Noctalia v5.3.0 or newer is required for the per-widget hover opt-out (plugin API 34). If upgrading from `local/pi-sessions:widget`, migrate saved widget types in your deployment configuration.
 The user-facing label remains **Pi Sessions**.
 
 ## Checks

@@ -122,6 +122,9 @@ check(visible and #renders.widget.children == 5, "three chips plus header and ov
 check(renders.widget.children[5].props.text == "+1", "overflow count")
 check(#renders.panel.children[2].children == 4, "panel lists every session")
 check(renders.widget.children[2].props.tooltip:find("/projects/demo", 1, true) ~= nil, "tooltip contains full project")
+check(rawget(widget, "onClick") == nil, "widget gaps have no click handler")
+check(renders.widget.children[1].kind == "button" and renders.widget.children[1].props.variant == "ghost", "π is its own hoverable control")
+check(renders.widget.children[2].kind == "button" and renders.widget.children[2].props.glyph == "check" and renders.widget.children[2].props.variant == "ghost", "session is its own hoverable control")
 local withGhostty = sample(5)
 withGhostty.ghostty = { pid = 4242, surfaceId = "18446744073709551615", piStartTicks = "12345", extra = "ignored" }
 send("upsert", withGhostty)
@@ -140,9 +143,9 @@ for _, bad in ipairs({ false, {}, { pid = 0, surfaceId = "1", piStartTicks = "12
   send("upsert", invalid)
   check(#shared.sessions == 4, "invalid Ghostty origin is rejected")
 end
-check(renders.widget.children[1].kind == "row" and renders.widget.children[1].props.onClick == "onClick", "π opens panel independently")
+check(renders.widget.children[1].kind == "button" and renders.widget.children[1].props.onClick == "openPanel", "π opens panel independently")
 local overflow = renders.widget.children[5]
-check(overflow.props.onClick == "onClick", "+N opens panel independently")
+check(overflow.props.onClick == "openPanel", "+N opens panel independently")
 widget[overflow.props.onClick]()
 check(panelId == "local/pi-noctalia:sessions", "+N click opens the panel")
 panelId = nil
@@ -196,8 +199,8 @@ pendingDescribe()
 check(#commands == beforeLateResult and panelId == nil, "late action result cannot focus an exited Pi")
 deferDescribe = false
 procStats[101] = processStat(101, "12345")
-widget.onClick()
-check(panelId == "local/pi-noctalia:sessions", "bar opens the session panel")
+widget.openPanel()
+check(panelId == "local/pi-noctalia:sessions", "explicit panel action opens the session panel")
 panel.onCloseClicked()
 check(closed, "panel can close")
 
@@ -260,7 +263,7 @@ check(details:find(sample(1).instanceId, 1, true) ~= nil, "instance identity is 
 local unicode = sample(6)
 unicode.name = string.rep("界", 20)
 send("upsert", unicode)
-local short = renders.widget.children[3].children[2].props.text
+local short = renders.widget.children[3].props.text
 check(utf8.len(short) == 13, "truncation preserves UTF-8 and appends an ellipsis")
 local stopped = sample(6, 2)
 stopped.aborted = true
@@ -269,5 +272,5 @@ check(renders.widget.children[3].props.tooltip:find("Stopped", 1, true) ~= nil, 
 vertical = true
 loadEntry("widget")
 check(renders.widget.kind == "column", "vertical bar uses a column")
-check(#renders.widget.children[2].children == 1, "vertical chips stay within the bar thickness")
+check(renders.widget.children[2].props.text == nil and renders.widget.children[2].props.glyph ~= nil, "vertical buttons show only status glyphs")
 print("Pi Sessions checks passed")
