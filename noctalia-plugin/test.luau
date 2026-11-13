@@ -175,23 +175,70 @@ panelId = nil
 renders.widget.children[4].props.onClick()
 check(commands[#commands].argv[12] == second.ghostty.surfaceId and panelId == nil, "each chip selects its own exact surface")
 local panelRows = renders.panel.children[2].children
-check(panelRows[1].props.onClick and panelRows[3].props.onClick, "focusable panel rows are clickable")
-check(panelRows[2].props.onClick == nil and panelRows[2].children[1].children[3].props.text:find("Focus unavailable", 1, true),
-  "sessions without a Ghostty target explain why they cannot be focused")
+check(panelRows[1].props.onClick and panelRows[3].props.onClick, "focusable cards are clickable")
+check(panelRows[2].props.onClick == nil and
+  panelRows[2].children[1].children[3].props.text:find("Focus unavailable", 1, true),
+  "sessions without a Ghostty target cannot be focused")
 panel[panelRows[3].props.onHover]("true", panelRows[3].props.key)
-check(renders.panel.children[2].children[3].props.fill ~= nil, "focusable row highlights on hover")
+check(renders.panel.children[2].children[3].props.fill == "primary/0.20", "focusable row highlights on hover")
 panel[panelRows[3].props.onHover]("false", panelRows[3].props.key)
-check(renders.panel.children[2].children[3].props.fill == nil, "row highlight clears on leave")
+check(renders.panel.children[2].children[3].props.fill == "surface/0", "row sends a transparent fill on leave")
 panelId = nil
 renders.panel.children[2].children[3].props.onClick()
-check(commands[#commands].argv[12] == second.ghostty.surfaceId and panelId == nil, "panel focuses its own exact Ghostty tab")
+check(commands[#commands].argv[12] == second.ghostty.surfaceId and panelId == nil and closed,
+  "panel card focuses its own Ghostty tab and closes")
+closed = false
+panel.onOpen()
 renders.panel.children[2].children[1].props.onClick()
-check(commands[#commands].argv[12] == focusable.ghostty.surfaceId and panelId == nil, "each panel row selects its own exact surface")
+check(commands[#commands].argv[12] == focusable.ghostty.surfaceId and panelId == nil and closed,
+  "each card focuses its own surface and closes")
+closed = false
+panel.onOpen()
+local beforeNoSelection = #commands
+panel.onKey("Return", true)
+check(not closed and #commands == beforeNoSelection, "Enter without a selection leaves panel open")
+panel.onKey("Tab", true)
+check(renders.panel.children[1].children[2].props.selected and
+  renders.panel.children[2].props.revealKey == "", "Tab can select Close")
+panel.onKey("Tab", true)
+check(renders.panel.children[2].children[1].props.border == "primary" and
+  renders.panel.children[2].props.revealKey == focusable.instanceId, "Tab visibly selects and reveals first session")
+panel.onKey("Down", true)
+check(renders.panel.children[2].children[3].props.border == "primary" and
+  renders.panel.children[2].children[3].props.fill == "primary/0.25", "Down skips unavailable sessions and highlights selected card")
+panel.onKey("Return", true)
+check(commands[#commands].argv[12] == second.ghostty.surfaceId and closed, "Enter focuses selection and closes panel")
+closed = false
+panel.onOpen()
+panel.onKey("Up", true)
+panel.onKey("Down", true)
+panel.onKey("space", true)
+check(commands[#commands].argv[12] == focusable.ghostty.surfaceId and closed, "Space focuses selection and closes panel")
+closed = false
+panel.onOpen()
+panel.onKey("Tab", true)
+panel.onKey("Tab", true)
+panel.onKey("shift+ISO_Left_Tab", true)
+check(renders.panel.children[1].children[2].props.selected, "Shift+Tab reaches Close")
+panel.onKey("Return", true)
+check(closed, "Enter activates Close")
+closed = false
+panel.onOpen()
+panel.onKey("shift+ISO_Left_Tab", true)
+check(renders.panel.children[2].props.revealKey == second.instanceId, "Shift+Tab wraps to last session")
+panel.onKey("Tab", false)
+check(renders.panel.children[2].props.revealKey == second.instanceId, "key release does not move selection")
+panel.onOpen()
+check(renders.panel.children[2].props.revealKey == "" and
+  renders.panel.children[2].children[3].props.border == "primary/0", "reopening resets selection")
 local beforeDeadClick = #commands
 procStats[101] = nil
 panelId = nil
 renders.panel.children[2].children[1].props.onClick()
-check(#commands == beforeDeadClick and panelId == nil, "panel never focuses an exited Pi or toggles itself")
+check(#commands == beforeDeadClick and panelId == nil and not closed, "stale card leaves panel open")
+panel.onKey("Down", true)
+panel.onKey("Return", true)
+check(#commands == beforeDeadClick and not closed, "stale keyboard selection leaves panel open")
 renders.widget.children[2].props.onClick()
 check(#commands == beforeDeadClick and panelId == "local/pi-noctalia:sessions", "exited Pi never focuses its old tab")
 procStats[101] = processStat(101, "98765")
@@ -233,7 +280,7 @@ service.update()
 check(shared.sessions[2].state == "disconnected", "duplicates cannot keep a dead instance alive")
 check(renders.panel.children[2].children[1].props.onClick == nil and
   renders.panel.children[2].children[1].children[1].children[3].props.text:find("Focus unavailable", 1, true),
-  "disconnected Ghostty rows are not clickable")
+  "disconnected Ghostty cards are not clickable")
 panelId = nil
 local beforeStaleClick = #commands
 renders.widget.children[2].props.onClick()

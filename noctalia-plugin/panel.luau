@@ -3,6 +3,11 @@ local presentation = require("./presentation.luau")
 local focusSession = require("./focus.luau")
 local sessions = noctalia.state.get("sessions") or {}
 local hovered
+local selected
+
+local function canFocus(session)
+  return session.ghostty ~= nil and session.state ~= "disconnected"
+end
 
 function onCloseClicked()
   panel.close()
@@ -13,11 +18,13 @@ local function render()
   for _, session in ipairs(sessions) do
     local status, glyph, color = presentation.status(session)
     local id = session.instanceId
-    local focusable = session.ghostty ~= nil and session.state ~= "disconnected"
+    local focusable = canFocus(session)
     table.insert(rows, ui.column({
       key = id, gap = 5, padding = 8, radius = 6,
-      fill = focusable and hovered == id and "surface_container" or nil,
-      onClick = focusable and function() focusSession(id) end or nil,
+      fill = focusable and selected == id and "primary/0.25"
+        or focusable and hovered == id and "primary/0.20" or "surface/0",
+      border = focusable and selected == id and "primary" or "primary/0", borderWidth = 2,
+      onClick = focusable and function() if focusSession(id) then panel.close() end end or nil,
       onHover = focusable and "onRowHover" or nil,
     }, {
       ui.row({ gap = 8, align = "center" }, {
@@ -38,9 +45,9 @@ local function render()
   panel.render(ui.column({ gap = 12, padding = 12, flexGrow = 1 }, {
     ui.row({ align = "center", gap = 8 }, {
       ui.label({ text = "Pi Sessions (" .. #sessions .. ")", fontWeight = "bold", flexGrow = 1 }),
-      ui.button({ glyph = "close", tooltip = "Close", onClick = "onCloseClicked" }),
+      ui.button({ key = "close", glyph = "close", tooltip = "Close", selected = selected == "close", onClick = "onCloseClicked" }),
     }),
-    ui.scroll({ flexGrow = 1 }, rows),
+    ui.scroll({ flexGrow = 1, revealKey = selected ~= "close" and selected or "" }, rows),
   }))
 end
 
@@ -50,7 +57,31 @@ function onRowHover(state, id)
   render()
 end
 
+function onKey(chord, pressed)
+  if not pressed then return end
+  if chord == "Return" or chord == "KP_Enter" or chord == "space" then
+    if selected == "close" then panel.close()
+    elseif selected and focusSession(selected) then panel.close() end
+    return
+  end
+  local tab = chord == "Tab" or chord == "shift+Tab" or chord == "shift+ISO_Left_Tab"
+  local ids = {}
+  if tab then table.insert(ids, "close") end
+  for _, session in ipairs(sessions) do
+    if canFocus(session) then table.insert(ids, session.instanceId) end
+  end
+  if #ids == 0 then selected = nil; render(); return end
+  local backwards = chord == "Up" or chord == "shift+Tab" or chord == "shift+ISO_Left_Tab"
+  local index = backwards and #ids + 1 or 0
+  for i, id in ipairs(ids) do
+    if id == selected then index = i; break end
+  end
+  selected = ids[(index - 1 + (backwards and -1 or 1)) % #ids + 1]
+  render()
+end
+
 function onOpen()
+  selected, hovered = nil, nil
   sessions = noctalia.state.get("sessions") or {}
   render()
 end

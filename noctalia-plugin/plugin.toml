@@ -26,6 +26,7 @@ max = 10
 [[panel]]
 id = "sessions"
 entry = "panel.luau"
+capture_keys = ["Tab", "shift+Tab", "shift+ISO_Left_Tab", "Up", "Down", "Return", "KP_Enter", "space"]
 width = 520
 height = 420
 placement = "attached"

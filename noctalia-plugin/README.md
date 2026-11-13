@@ -8,7 +8,8 @@ The service receives full snapshots over plugin IPC and keeps the registry in me
 - Horizontal bars show short names and distinct working, waiting, idle, stopped and disconnected states.
 - Vertical bars use glyphs to fit the bar thickness.
 - Three sessions are visible by default; `max_visible` controls the limit and `+N` opens the full list.
-- Clicking π opens the panel; clicking a live Ghostty chip or panel row focuses its exact tab or split. Unfocusable chips open the panel; unfocusable panel rows are labeled and not clickable.
+- Clicking π opens the panel; clicking a live Ghostty chip or its panel card focuses the exact tab or split. A valid panel-card click closes the panel when focus starts. Unfocusable chips open the panel; unfocusable panel cards are labeled and not clickable.
+- In the panel, Tab / Shift+Tab cycle Close and available sessions; Up / Down cycle sessions only. Enter or Space activates the selection and closes the panel when focus starts; Escape also closes it. Selection and pointer hover have separate visible cues.
 - π, each session chip, and +N use separate native button hover feedback; gaps between them are not clickable. Bar status glyphs remain distinct but use a neutral foreground; the popup retains status colors.
 - Tooltips and the popup show the project, model, logical session ID and instance ID.
 - State changes do not reorder sessions, and the bar hides when the registry is empty.
